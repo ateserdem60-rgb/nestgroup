@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>İlan • Nest Group</title><link rel="stylesheet" href="/assets/style.css"></head>
+<body>
+<header class="site-header"><div class="header-inner"><a class="brand" href="/"><b>NEST</b> GROUP</a><nav><a href="/">ANA SAYFA</a><a href="/#portfoy">İLANLAR</a></nav></div></header>
+<main class="section"><div class="shell" id="detail"><div class="empty">İlan yükleniyor…</div></div></main>
+<script type="module">
+import { supabase, money } from '/assets/supabase.js';
+const id=new URLSearchParams(location.search).get('id');
+const el=document.querySelector('#detail');
+if(!id){el.innerHTML='<div class="empty">İlan bulunamadı.</div>'}
+else{
+ const {data:p,error}=await supabase.from('properties').select('*').eq('id',id).eq('published',true).single();
+ if(error||!p){el.innerHTML='<div class="empty">İlan bulunamadı veya yayından kaldırılmış.</div>'}
+ else{
+   el.innerHTML=`
+    <div class="eyebrow">${p.listing_no||'NEST GROUP'}</div>
+    <h1 style="font-size:clamp(42px,6vw,78px);margin:12px 0">${p.title}</h1>
+    <p class="muted">${[p.district,p.city,p.rooms,p.gross_m2?p.gross_m2+' m²':''].filter(Boolean).join(' • ')}</p>
+    <img src="${p.cover_url||'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=85'}" style="width:100%;max-height:650px;object-fit:cover;margin:28px 0">
+    <div class="section-head"><div><h2>${money(p.price,p.type==='Kiralık')}</h2><p class="muted">${p.description||''}</p></div>
+    <div><a class="btn dark" href="https://wa.me/905333240347?text=${encodeURIComponent('Merhaba, '+(p.listing_no||'')+' numaralı '+p.title+' ilanı hakkında bilgi almak istiyorum.')}">WhatsApp'tan Bilgi Al</a></div></div>`;
+ }
+}
+</script>
+</body></html>

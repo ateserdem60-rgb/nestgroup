@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nest Group Admin</title><link rel="stylesheet" href="/assets/style.css"></head>
+<body class="login-wrap">
+<div class="login-card">
+ <div class="eyebrow">Nest Group</div><h1>Yönetim Paneli</h1>
+ <p class="muted">Supabase Auth ile güvenli giriş.</p>
+ <div id="msg"></div>
+ <form id="login-form">
+  <div class="field"><label>E-posta</label><input id="email" type="email" required></div>
+  <div class="field"><label>Şifre</label><input id="password" type="password" required></div>
+  <button class="btn dark" style="width:100%" type="submit">Giriş Yap</button>
+ </form>
+</div>
+<script type="module">
+import { supabase } from '/assets/supabase.js';
+const {data:{session}}=await supabase.auth.getSession();
+if(session) location.href='/admin/';
+document.querySelector('#login-form').addEventListener('submit',async(e)=>{
+ e.preventDefault(); const msg=document.querySelector('#msg'); msg.innerHTML='';
+ const email=document.querySelector('#email').value.trim(), password=document.querySelector('#password').value;
+ const {error}=await supabase.auth.signInWithPassword({email,password});
+ if(error) msg.innerHTML='<div class="error">'+error.message+'</div>'; else location.href='/admin/';
+});
+</script></body></html>
