@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ayarlar • Nest Group</title><link rel="stylesheet" href="./style.css"></head>
+<body>
+<div class="admin-layout">
+<aside class="sidebar">
+  <a class="brand" href="./index.html"><strong>NEST</strong> GROUP</a>
+  <div class="sidebar-nav">
+    <a href="./admin.html">Dashboard</a>
+    <a href="./ilanlar.html">İlanlar</a>
+    <a href="./yeni.html">Yeni İlan Ekle</a>
+    <a class="active" href="./ayarlar.html">Ayarlar / PIN</a>
+    <a href="./index.html">Siteyi Gör</a>
+    <button id="logout" type="button">Çıkış Yap</button>
+  </div>
+</aside>
+<main class="admin-main">
+  <div class="admin-top"><div><div class="eyebrow">Güvenlik</div><h1>Yönetim PIN'i</h1></div></div>
+  <div id="message"></div>
+  <form id="change-pin" class="panel" style="max-width:620px">
+    <div class="form-field"><label>Mevcut PIN</label>
+      <input id="current_pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" required>
+    </div>
+    <div class="form-field"><label>Yeni 4 Haneli PIN</label>
+      <input id="new_pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" required>
+    </div>
+    <div class="form-field"><label>Yeni PIN Tekrar</label>
+      <input id="confirm_pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" required>
+    </div>
+    <button class="btn dark" type="submit">PIN'i Değiştir</button>
+  </form>
+</main>
+</div>
+<script type="module">
+import { supabase, requireAdmin } from "./supabase.js";
+if (await requireAdmin()) {
+  document.getElementById("logout").onclick = () => {
+    sessionStorage.removeItem("nest_admin_pin_session");
+    window.location.href = "./admin-login.html";
+  };
+
+  document.getElementById("change-pin").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const box = document.getElementById("message");
+    const currentPin = document.getElementById("current_pin").value;
+    const newPin = document.getElementById("new_pin").value;
+    const confirmPin = document.getElementById("confirm_pin").value;
+    box.innerHTML = "";
+
+    if (!/^\d{4}$/.test(newPin)) {
+      box.innerHTML = '<div class="error">Yeni PIN tam 4 rakam olmalı.</div>'; return;
+    }
+    if (newPin !== confirmPin) {
+      box.innerHTML = '<div class="error">Yeni PIN değerleri eşleşmiyor.</div>'; return;
+    }
+
+    const { data, error } = await supabase.rpc("change_admin_pin", {
+      current_pin: currentPin,
+      new_pin: newPin
+    });
+    if (error) { box.innerHTML = `<div class="error">${error.message}</div>`; return; }
+    if (!data) { box.innerHTML = '<div class="error">Mevcut PIN hatalı.</div>'; return; }
+
+    box.innerHTML = '<div class="success">PIN başarıyla değiştirildi.</div>';
+    e.target.reset();
+  });
+}
+</script>
+</body></html>
