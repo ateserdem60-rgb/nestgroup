@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>İlan Düzenle • Nest Group</title><link rel="stylesheet" href="./style.css"></head>
+<body>
+<div class="admin-layout">
+
+<aside class="sidebar">
+  <a class="brand" href="./index.html"><strong>NEST</strong> GROUP</a>
+  <div class="sidebar-nav">
+    <a href="./admin.html" data-nav="dashboard">Dashboard</a>
+    <a href="./ilanlar.html" data-nav="ilanlar">İlanlar</a>
+    <a href="./yeni.html" data-nav="yeni">Yeni İlan Ekle</a>
+    <a href="./index.html">Siteyi Gör</a>
+    <button id="logout" type="button">Çıkış Yap</button>
+  </div>
+</aside>
+
+<main class="admin-main">
+  <div class="admin-top"><div><div class="eyebrow">Portföy</div><h1>İlan Düzenle</h1></div></div>
+  <div id="message"></div>
+  <form id="property-form" class="panel">
+    
+<div class="admin-form-grid">
+  <div class="form-field"><label>İlan Başlığı *</label><input id="title" required></div>
+  <div class="form-field"><label>İlan No</label><input id="listing_no" placeholder="NG-1001"></div>
+
+  <div class="form-field"><label>Tür</label>
+    <select id="type"><option>Satılık</option><option>Kiralık</option><option>Özel Portföy</option></select>
+  </div>
+  <div class="form-field"><label>Fiyat</label><input id="price" type="number" min="0"></div>
+
+  <div class="form-field"><label>Şehir</label><input id="city" value="Mardin"></div>
+  <div class="form-field"><label>İlçe</label><input id="district" value="Midyat"></div>
+
+  <div class="form-field"><label>Mahalle / Bölge</label><input id="neighborhood"></div>
+  <div class="form-field"><label>Oda Sayısı</label><input id="rooms" placeholder="2+1"></div>
+
+  <div class="form-field"><label>Brüt m²</label><input id="gross_m2" type="number" min="0"></div>
+  <div class="form-field"><label>Bulunduğu Kat</label><input id="floor"></div>
+
+  <div class="form-field"><label>Isıtma</label><input id="heating" placeholder="Kombi"></div>
+  <div class="form-field"><label>Durum</label>
+    <select id="status"><option>Aktif</option><option>Satıldı</option><option>Kiralandı</option><option>Pasif</option></select>
+  </div>
+
+  <div class="form-field full"><label>Kapak Görseli URL</label><input id="cover_url" placeholder="https://..."></div>
+  <div class="form-field full"><label>veya Kapak Fotoğrafı Yükle</label><input id="cover_file" type="file" accept="image/*"></div>
+
+  <div class="form-field full"><label>Açıklama</label><textarea id="description"></textarea></div>
+
+  <label class="inline-check"><input id="featured" type="checkbox"> Öne Çıkan</label>
+  <label class="inline-check"><input id="published" type="checkbox" checked> Yayında</label>
+</div>
+
+    <div class="actions"><button class="btn dark" type="submit">Değişiklikleri Kaydet</button></div>
+  </form>
+</main>
+</div>
+
+<script type="module">
+import { supabase, requireAdmin } from "./supabase.js";
+
+const session = await requireAdmin();
+if (session) {
+  document.querySelector('[data-nav="ilanlar"]').classList.add("active");
+  document.getElementById("logout").onclick = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "./admin-login.html";
+  };
+
+  const id = new URLSearchParams(window.location.search).get("id");
+  const el = key => document.getElementById(key);
+  const msg = el("message");
+
+  if (!id) window.location.href = "./ilanlar.html";
+
+  const { data: p, error } = await supabase.from("properties").select("*").eq("id", id).single();
+
+  if (error || !p) {
+    msg.innerHTML = '<div class="error">İlan yüklenemedi.</div>';
+  } else {
+    ["title","listing_no","type","price","city","district","neighborhood","rooms","gross_m2","floor","heating","status","cover_url","description"]
+      .forEach(key => { if (el(key)) el(key).value = p[key] ?? ""; });
+    el("featured").checked = Boolean(p.featured);
+    el("published").checked = Boolean(p.published);
+  }
+
+  async function uploadCover(file) {
+    if (!file) return null;
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `covers/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("property-images").upload(path, file, { upsert:false });
+    if (error) throw error;
+    return supabase.storage.from("property-images").getPublicUrl(path).data.publicUrl;
+  }
+
+  el("property-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    msg.innerHTML = "";
+
+    try {
+      let cover = el("cover_url").value.trim() || null;
+      const file = el("cover_file").files[0];
+      if (file) cover = await uploadCover(file);
+
+      const payload = {
+        title: el("title").value.trim(),
+        listing_no: el("listing_no").value.trim() || null,
+        type: el("type").value,
+        price: el("price").value ? Number(el("price").value) : null,
+        city: el("city").value.trim() || "Mardin",
+        district: el("district").value.trim() || "Midyat",
+        neighborhood: el("neighborhood").value.trim() || null,
+        rooms: el("rooms").value.trim() || null,
+        gross_m2: el("gross_m2").value ? Number(el("gross_m2").value) : null,
+        floor: el("floor").value.trim() || null,
+        heating: el("heating").value.trim() || null,
+        status: el("status").value,
+        cover_url: cover,
+        description: el("description").value.trim() || null,
+        featured: el("featured").checked,
+        published: el("published").checked,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase.from("properties").update(payload).eq("id", id);
+      if (error) throw error;
+
+      msg.innerHTML = '<div class="success">İlan başarıyla güncellendi.</div>';
+    } catch (err) {
+      msg.innerHTML = `<div class="error">${err.message}</div>`;
+    }
+  });
+}
+</script>
+</body>
+</html>
