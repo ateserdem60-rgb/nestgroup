@@ -1,2 +1,0 @@
-export const SUPABASE_URL = "https://qdqebagajmvpfxosdvfn.supabase.co";
-export const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rRDIy4Adq628aIJLQ9A_rw_smigKUJY";
